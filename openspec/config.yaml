@@ -1,0 +1,25 @@
+schema: spec-driven
+
+context: |
+  Aplicación personalizada basada en Frappe Framework v15 y compatible con ERPNext v15.
+  El código funcional debe seguir las convenciones estándar de Frappe, evitar cambios en
+  el core y mantener una rama Git y un cambio OpenSpec dedicados por tarea.
+  No se deben hardcodear sitios, empresas, usuarios, rutas, claves ni credenciales.
+
+rules:
+  proposal:
+    - Incluir problema, objetivo, alcance, exclusiones, impacto esperado y criterios de aceptación.
+  design:
+    - Identificar DocTypes, hooks, APIs, reportes, fixtures y archivos afectados.
+    - Documentar riesgos técnicos y plan de reversión.
+  tasks:
+    - Usar tareas verificables y registrar las validaciones realizadas.
+
+operations:
+  apply:
+    guidance:
+      - Mantener compatibilidad con Frappe y ERPNext v15.
+      - Ejecutar validaciones proporcionales al riesgo y conservar cambios mínimos.
+  archive:
+    guidance:
+      - Registrar pruebas, estado Git y cualquier desviación antes de archivar.
