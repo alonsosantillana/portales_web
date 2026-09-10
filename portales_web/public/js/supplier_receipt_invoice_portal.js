@@ -1,7 +1,7 @@
 frappe.ready(() => {
 	const api = "portales_web.api.supplier_portal";
-	const form = document.getElementById("supplier-invoice-form");
-	const purchaseOrder = document.getElementById("purchase-order");
+	const form = document.getElementById("supplier-receipt-invoice-form");
+	const purchaseReceipt = document.getElementById("purchase-receipt");
 	const currency = document.getElementById("currency");
 	const itemsBody = document.getElementById("items-body");
 	const itemsWrapper = document.getElementById("items-wrapper");
@@ -40,7 +40,7 @@ frappe.ready(() => {
 			reader.readAsDataURL(file);
 		});
 
-	const clearItems = (message = __("Seleccione una Orden de Compra.")) => {
+	const clearItems = (message = __("Seleccione una Recepción de Compra.")) => {
 		itemsBody.replaceChildren();
 		itemsWrapper.classList.add("d-none");
 		itemsEmpty.classList.remove("d-none");
@@ -53,17 +53,18 @@ frappe.ready(() => {
 		currency.value = data.currency || "";
 		const rows = data.items || [];
 		if (!rows.length) {
-			clearItems(__("La Orden de Compra no tiene cantidades disponibles."));
+			clearItems(__("La Recepción de Compra no tiene cantidades disponibles."));
 			return;
 		}
 
 		for (const item of rows) {
 			const row = itemsBody.insertRow();
-			row.dataset.purchaseOrderItem = item.purchase_order_item;
+			row.dataset.purchaseReceiptItem = item.purchase_receipt_item;
 			addTextCell(row, item.item_code);
 			addTextCell(row, item.description);
 			addTextCell(row, formatNumber(item.ordered_qty), "text-right");
 			addTextCell(row, formatNumber(item.submitted_billed_qty), "text-right");
+			addTextCell(row, formatNumber(item.returned_qty), "text-right");
 			addTextCell(row, formatNumber(item.reserved_qty), "text-right");
 			addTextCell(row, formatNumber(item.available_qty), "text-right");
 			const inputCell = row.insertCell();
@@ -82,48 +83,64 @@ frappe.ready(() => {
 		itemsWrapper.classList.remove("d-none");
 	};
 
-	const loadPurchaseOrders = async () => {
+	const loadPurchaseReceipts = async () => {
 		try {
-			const response = await call("get_eligible_purchase_orders");
-			const orders = response.message || [];
-			purchaseOrder.replaceChildren();
+			const response = await call("get_eligible_purchase_receipts");
+			const receipts = response.message || [];
+			purchaseReceipt.replaceChildren();
 			const empty = document.createElement("option");
 			empty.value = "";
-			empty.textContent = orders.length
-				? __("Seleccione una Orden de Compra")
-				: __("No hay Órdenes de Compra disponibles");
-			purchaseOrder.appendChild(empty);
-			for (const order of orders) {
+			empty.textContent = receipts.length
+				? __("Seleccione una Recepción de Compra")
+				: __("No hay Recepciones de Compra disponibles");
+			purchaseReceipt.appendChild(empty);
+			for (const receipt of receipts) {
 				const option = document.createElement("option");
-				option.value = order.name;
-				option.textContent = `${order.name} · ${order.currency} ${formatNumber(
-					order.grand_total
+				option.value = receipt.name;
+				option.textContent = `${receipt.name} · ${receipt.currency} ${formatNumber(
+					receipt.grand_total
 				)}`;
-				purchaseOrder.appendChild(option);
+				purchaseReceipt.appendChild(option);
 			}
-			purchaseOrder.disabled = !orders.length;
+			purchaseReceipt.disabled = !receipts.length;
 		} catch (error) {
-			purchaseOrder.replaceChildren();
+			purchaseReceipt.replaceChildren();
 			const option = document.createElement("option");
-			option.textContent = __("No fue posible cargar las órdenes");
-			purchaseOrder.appendChild(option);
-			purchaseOrder.disabled = true;
+			option.textContent = __("No fue posible cargar las recepciones");
+			purchaseReceipt.appendChild(option);
+			purchaseReceipt.disabled = true;
 		}
 	};
 
 	const loadItems = async () => {
-		const name = purchaseOrder.value;
+		const name = purchaseReceipt.value;
 		if (!name) {
 			clearItems();
 			return;
 		}
 		clearItems(__("Cargando ítems..."));
 		try {
-			const response = await call("get_purchase_order_items", { purchase_order: name });
+			const response = await call("get_purchase_receipt_items", {
+				purchase_receipt: name,
+			});
 			renderItems(response.message || {});
 		} catch (error) {
-			clearItems(__("No fue posible cargar los ítems de la orden."));
+			clearItems(__("No fue posible cargar los ítems de la recepción."));
 		}
+	};
+
+	const addSourceCell = (row, submission) => {
+		const cell = addTextCell(row, "");
+		const isReceipt = submission.source_type === "Purchase Receipt";
+		const label = `${isReceipt ? __("Recepción") : __("Orden")} · ${submission.source_name}`;
+		if (isReceipt) {
+			cell.textContent = label;
+			return;
+		}
+		const link = document.createElement("a");
+		link.href = `/purchase-orders/${encodeURIComponent(submission.source_name)}`;
+		link.textContent = label;
+		cell.appendChild(link);
 	};
 
 	const loadSubmissions = async () => {
@@ -142,21 +159,7 @@ frappe.ready(() => {
 				const row = submissionsBody.insertRow();
 				addTextCell(row, submission.name);
 				addTextCell(row, submission.bill_no);
-				const sourceCell = addTextCell(row, "");
-				const isReceipt = submission.source_type === "Purchase Receipt";
-				const sourceLabel = `${isReceipt ? __("Recepción") : __("Orden")} · ${
-					submission.source_name
-				}`;
-				if (isReceipt) {
-					sourceCell.textContent = sourceLabel;
-				} else {
-					const sourceLink = document.createElement("a");
-					sourceLink.href = `/purchase-orders/${encodeURIComponent(
-						submission.source_name
-					)}`;
-					sourceLink.textContent = sourceLabel;
-					sourceCell.appendChild(sourceLink);
-				}
+				addSourceCell(row, submission);
 				addTextCell(row, submission.status);
 				const piCell = addTextCell(row, "");
 				if (submission.purchase_invoice) {
@@ -183,7 +186,7 @@ frappe.ready(() => {
 			const input = row.querySelector(".qty-input");
 			const qty = Number(input.value);
 			if (Number.isFinite(qty) && qty > 0) {
-				rows.push({ purchase_order_item: row.dataset.purchaseOrderItem, qty });
+				rows.push({ purchase_receipt_item: row.dataset.purchaseReceiptItem, qty });
 			}
 		}
 		return rows;
@@ -209,8 +212,8 @@ frappe.ready(() => {
 		submitButton.disabled = true;
 		try {
 			const [invoicePdf, invoiceXml] = await Promise.all([readFile(pdf), readFile(xml)]);
-			const response = await call("submit_invoice", {
-				purchase_order: purchaseOrder.value,
+			const response = await call("submit_invoice_from_receipt", {
+				purchase_receipt: purchaseReceipt.value,
 				bill_no: document.getElementById("bill-no").value,
 				bill_date: document.getElementById("bill-date").value,
 				declared_total: document.getElementById("declared-total").value,
@@ -230,14 +233,14 @@ frappe.ready(() => {
 			});
 			if (!result.duplicate) form.reset();
 			clearItems();
-			await Promise.all([loadPurchaseOrders(), loadSubmissions()]);
+			await Promise.all([loadPurchaseReceipts(), loadSubmissions()]);
 		} finally {
 			submitButton.disabled = false;
 		}
 	};
 
-	purchaseOrder.addEventListener("change", loadItems);
+	purchaseReceipt.addEventListener("change", loadItems);
 	form.addEventListener("submit", handleSubmit);
 	document.getElementById("bill-date").max = frappe.datetime.get_today();
-	Promise.all([loadPurchaseOrders(), loadSubmissions()]);
+	Promise.all([loadPurchaseReceipts(), loadSubmissions()]);
 });

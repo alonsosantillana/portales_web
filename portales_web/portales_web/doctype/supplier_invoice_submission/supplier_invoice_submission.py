@@ -13,6 +13,8 @@ from frappe.model.document import Document
 
 ACTIVE_RESERVATION_STATUSES = ("Registrada", "En revisión", "Observada")
 FINAL_STATUS_BY_DOCSTATUS = {1: "Procesada", 2: "Rechazada"}
+SOURCE_PURCHASE_ORDER = "Purchase Order"
+SOURCE_PURCHASE_RECEIPT = "Purchase Receipt"
 
 
 def normalize_bill_no(value: str) -> str:
@@ -30,8 +32,28 @@ def make_supplier_invoice_key(supplier: str, normalized_bill_no: str) -> str:
 
 class SupplierInvoiceSubmission(Document):
 	def validate(self):
+		self.source_type = self.source_type or (
+			SOURCE_PURCHASE_RECEIPT if self.purchase_receipt else SOURCE_PURCHASE_ORDER
+		)
+		self._validate_source()
 		self.normalized_bill_no = normalize_bill_no(self.bill_no)
 		self.supplier_invoice_key = make_supplier_invoice_key(self.supplier, self.normalized_bill_no)
+
+	def _validate_source(self):
+		if self.source_type == SOURCE_PURCHASE_ORDER:
+			if not self.purchase_order or self.purchase_receipt:
+				frappe.throw(_("El registro debe contener únicamente una Orden de Compra como origen."))
+			for item in self.items:
+				if not item.purchase_order_item or item.purchase_receipt_item:
+					frappe.throw(_("Los ítems no coinciden con el origen Orden de Compra."))
+		elif self.source_type == SOURCE_PURCHASE_RECEIPT:
+			if not self.purchase_receipt or self.purchase_order:
+				frappe.throw(_("El registro debe contener únicamente una Recepción de Compra como origen."))
+			for item in self.items:
+				if not item.purchase_receipt_item or item.purchase_order_item:
+					frappe.throw(_("Los ítems no coinciden con el origen Recepción de Compra."))
+		else:
+			frappe.throw(_("El tipo de origen del registro no es válido."))
 
 	def on_trash(self):
 		if self.purchase_invoice:

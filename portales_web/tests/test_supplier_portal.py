@@ -21,6 +21,21 @@ class TestSupplierPortalSecurity(unittest.TestCase):
 			{"from_route": "/registrar-factura", "to_route": "registrar_factura"},
 			hooks.website_route_rules,
 		)
+		self.assertIn(
+			{
+				"from_route": "/registrar-factura-recepcion",
+				"to_route": "registrar_factura_recepcion",
+			},
+			hooks.website_route_rules,
+		)
+		self.assertIn(
+			{
+				"title": "Facturar recepción",
+				"route": "/registrar-factura-recepcion",
+				"role": "Supplier",
+			},
+			hooks.portal_menu_items,
+		)
 
 	def test_bill_number_is_normalized_and_key_is_stable(self):
 		self.assertEqual(normalize_bill_no(" f001 - 00015 "), "F001-00015")
@@ -60,6 +75,28 @@ class TestSupplierPortalSecurity(unittest.TestCase):
 			supplier_portal._assert_purchase_order_state(
 				frappe._dict(
 					{"supplier": "SUP-002", "docstatus": 1, "status": "To Receive and Bill"}
+				),
+				"SUP-001",
+			)
+
+	@patch.object(supplier_portal.frappe, "throw", side_effect=frappe.PermissionError)
+	@patch.object(supplier_portal, "_", new=lambda value: value)
+	def test_purchase_receipt_from_another_supplier_is_rejected(self, _throw):
+		with self.assertRaises(frappe.PermissionError):
+			supplier_portal._assert_purchase_receipt_state(
+				frappe._dict(
+					{"supplier": "SUP-002", "docstatus": 1, "status": "To Bill", "is_return": 0}
+				),
+				"SUP-001",
+			)
+
+	@patch.object(supplier_portal.frappe, "throw", side_effect=frappe.ValidationError)
+	@patch.object(supplier_portal, "_", new=lambda value: value)
+	def test_purchase_receipt_return_is_rejected(self, _throw):
+		with self.assertRaises(frappe.ValidationError):
+			supplier_portal._assert_purchase_receipt_state(
+				frappe._dict(
+					{"supplier": "SUP-001", "docstatus": 1, "status": "To Bill", "is_return": 1}
 				),
 				"SUP-001",
 			)
@@ -109,6 +146,102 @@ class TestSupplierPortalQuantities(unittest.TestCase):
 			supplier_portal._validate_requested_items(
 				[{"purchase_order_item": "PO-ITEM-OTHER", "qty": 1}],
 				self.available,
+			)
+
+	@patch.object(supplier_portal, "_get_reserved_receipt_quantities", return_value={"PR-ITEM-1": 1})
+	@patch.object(supplier_portal, "get_returned_qty_map", return_value={"PR-ITEM-1": 3})
+	@patch.object(supplier_portal, "get_invoiced_qty_map", return_value={"PR-ITEM-1": 2})
+	@patch.object(supplier_portal.frappe.db, "get_single_value", return_value=0)
+	def test_receipt_availability_deducts_invoices_returns_and_reservations(
+		self, _setting, _invoiced, _returned, _reserved
+	):
+		receipt = MagicMock()
+		receipt.name = "PR-001"
+		receipt.currency = "PEN"
+		receipt.items = [
+			frappe._dict(
+				{
+					"name": "PR-ITEM-1",
+					"item_code": "ITEM-001",
+					"description": "Item",
+					"uom": "Unit",
+					"qty": 10,
+					"received_qty": 12,
+					"rejected_qty": 1,
+					"rate": 12.5,
+				}
+			)
+		]
+
+		row = supplier_portal._get_purchase_receipt_item_availability(receipt)[0]
+
+		self.assertEqual(row["returned_qty"], 2)
+		self.assertEqual(row["available_qty"], 5)
+
+	@patch.object(supplier_portal, "_get_reserved_receipt_quantities", return_value={"PR-ITEM-1": 1})
+	@patch.object(supplier_portal, "get_returned_qty_map", return_value={"PR-ITEM-1": 3})
+	@patch.object(supplier_portal, "get_invoiced_qty_map", return_value={"PR-ITEM-1": 2})
+	@patch.object(supplier_portal.frappe.db, "get_single_value", return_value=1)
+	def test_receipt_availability_can_bill_rejected_quantity(
+		self, _setting, _invoiced, _returned, _reserved
+	):
+		receipt = MagicMock()
+		receipt.name = "PR-001"
+		receipt.currency = "PEN"
+		receipt.items = [
+			frappe._dict(
+				{
+					"name": "PR-ITEM-1",
+					"item_code": "ITEM-001",
+					"description": "Item",
+					"uom": "Unit",
+					"qty": 10,
+					"received_qty": 12,
+					"rejected_qty": 2,
+					"rate": 12.5,
+				}
+			)
+		]
+
+		row = supplier_portal._get_purchase_receipt_item_availability(receipt)[0]
+
+		self.assertEqual(row["ordered_qty"], 12)
+		self.assertEqual(row["returned_qty"], 0)
+		self.assertEqual(row["available_qty"], 9)
+
+	def test_partial_receipt_quantity_uses_server_rate(self):
+		available = {
+			"PR-ITEM-1": {
+				"purchase_receipt_item": "PR-ITEM-1",
+				"item_code": "ITEM-001",
+				"description": "Item",
+				"uom": "Unit",
+				"currency": "PEN",
+				"ordered_qty": 10,
+				"submitted_billed_qty": 2,
+				"returned_qty": 1,
+				"reserved_qty": 1,
+				"available_qty": 6,
+				"qty": 6,
+				"rate": 15,
+				"amount": 90,
+			}
+		}
+
+		rows = supplier_portal._validate_requested_receipt_items(
+			[{"purchase_receipt_item": "PR-ITEM-1", "qty": 4, "rate": 0}], available
+		)
+
+		self.assertEqual(rows[0]["qty"], 4)
+		self.assertEqual(rows[0]["rate"], 15)
+		self.assertEqual(rows[0]["amount"], 60)
+
+	@patch.object(supplier_portal.frappe, "throw", side_effect=frappe.PermissionError)
+	@patch.object(supplier_portal, "_", new=lambda value: value)
+	def test_item_from_another_purchase_receipt_is_rejected(self, _throw):
+		with self.assertRaises(frappe.PermissionError):
+			supplier_portal._validate_requested_receipt_items(
+				[{"purchase_receipt_item": "PR-ITEM-OTHER", "qty": 1}], {}
 			)
 
 
@@ -162,6 +295,63 @@ class TestSupplierPortalAttachments(unittest.TestCase):
 				".pdf",
 			)
 
+
+class TestSupplierReceiptMapper(unittest.TestCase):
+	@patch.object(supplier_portal, "_apply_purchase_invoice_fiscal_metadata")
+	@patch.object(supplier_portal, "_map_purchase_receipt_to_invoice")
+	def test_mapper_keeps_native_references(self, native_mapper, fiscal_adapter):
+		invoice_item = frappe._dict(
+			{
+				"pr_detail": "PR-ITEM-1",
+				"purchase_receipt": "PR-001",
+				"qty": 5,
+			}
+		)
+		invoice = MagicMock()
+		invoice.items = [invoice_item]
+		native_mapper.return_value = invoice
+		receipt = MagicMock()
+		receipt.name = "PR-001"
+
+		result = supplier_portal._make_purchase_invoice_from_receipt(
+			receipt,
+			"F001-1",
+			"2026-09-10",
+			[{"purchase_receipt_item": "PR-ITEM-1", "qty": 2}],
+			"SIS-1",
+		)
+
+		self.assertIs(result, invoice)
+		self.assertEqual(invoice_item.qty, 2)
+		self.assertEqual(invoice_item.purchase_receipt, "PR-001")
+		native_mapper.assert_called_once_with("PR-001", {"PR-ITEM-1"})
+		fiscal_adapter.assert_called_once_with(invoice)
+		invoice.insert.assert_called_once_with(ignore_permissions=True)
+
+	@patch.object(supplier_portal.frappe.db, "get_single_value", return_value=0)
+	@patch.object(supplier_portal, "get_invoiced_qty_map", return_value={})
+	@patch.object(supplier_portal, "get_returned_qty_map", return_value={})
+	@patch.object(supplier_portal, "get_mapped_doc")
+	def test_receipt_adapter_bypasses_permissions_only_in_mapping_engine(
+		self, mapped_doc, _returned, _invoiced, _setting
+	):
+		invoice = MagicMock()
+		mapped_doc.return_value = invoice
+
+		result = supplier_portal._map_purchase_receipt_to_invoice(
+			"PR-001", {"PR-ITEM-1"}
+		)
+
+		self.assertIs(result, invoice)
+		self.assertTrue(mapped_doc.call_args.kwargs["ignore_permissions"])
+		mapping = mapped_doc.call_args.args[2]
+		self.assertEqual(
+			mapping["Purchase Receipt Item"]["field_map"]["name"], "pr_detail"
+		)
+		self.assertEqual(
+			mapping["Purchase Receipt Item"]["field_map"]["parent"],
+			"purchase_receipt",
+		)
 
 if __name__ == "__main__":
 	unittest.main()

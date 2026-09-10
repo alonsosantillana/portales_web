@@ -1,6 +1,6 @@
 {% extends "templates/web.html" %}
 
-{% block title %}{{ _("Registrar factura") }}{% endblock %}
+{% block title %}{{ _("Facturar recepción") }}{% endblock %}
 
 {% block head_include %}
 <link rel="stylesheet" href="/assets/portales_web/css/supplier_portal.css">
@@ -11,28 +11,27 @@
 	<div class="supplier-invoice-header">
 		<div>
 			<p class="text-muted mb-1">{{ _("Portal de proveedores") }}</p>
-			<h1 class="mb-2">{{ _("Registrar factura") }}</h1>
+			<h1 class="mb-2">{{ _("Facturar recepción") }}</h1>
 			<p class="mb-0">{{ _("Proveedor") }}: <strong>{{ supplier_name | e }}</strong></p>
 		</div>
 		<div class="supplier-invoice-links">
-			<a class="btn btn-primary" href="/registrar-factura-recepcion">{{ _("Facturar recepción") }}</a>
-			<a class="btn btn-default" href="/purchase-orders">{{ _("Órdenes de compra") }}</a>
+			<a class="btn btn-default" href="/registrar-factura">{{ _("Facturar orden") }}</a>
 			<a class="btn btn-default" href="/purchase-invoices">{{ _("Facturas") }}</a>
 		</div>
 	</div>
 
 	<div class="alert alert-info">
-		{{ _("Los importes, precios, moneda y proveedor se validarán nuevamente en ERPNext. La factura quedará en borrador para revisión interna.") }}
+		{{ _("Seleccione una recepción enviada. ERPNext validará nuevamente cantidades, precios, moneda y proveedor; la factura quedará en borrador para revisión interna.") }}
 	</div>
 
-	<form id="supplier-invoice-form" novalidate>
+	<form id="supplier-receipt-invoice-form" novalidate>
 		<div class="supplier-invoice-card">
 			<h3>{{ _("Datos del comprobante") }}</h3>
 			<div class="row">
 				<div class="col-md-6 form-group">
-					<label for="purchase-order">{{ _("Orden de compra") }}</label>
-					<select id="purchase-order" class="form-control" required>
-						<option value="">{{ _("Cargando órdenes...") }}</option>
+					<label for="purchase-receipt">{{ _("Recepción de compra") }}</label>
+					<select id="purchase-receipt" class="form-control" required>
+						<option value="">{{ _("Cargando recepciones...") }}</option>
 					</select>
 				</div>
 				<div class="col-md-3 form-group">
@@ -61,16 +60,17 @@
 		</div>
 
 		<div class="supplier-invoice-card">
-			<h3>{{ _("Ítems pendientes") }}</h3>
-			<div id="items-empty" class="text-muted">{{ _("Seleccione una Orden de Compra.") }}</div>
+			<h3>{{ _("Ítems recibidos pendientes") }}</h3>
+			<div id="items-empty" class="text-muted">{{ _("Seleccione una Recepción de Compra.") }}</div>
 			<div class="table-responsive d-none" id="items-wrapper">
 				<table class="table table-bordered supplier-items-table">
 					<thead>
 						<tr>
 							<th>{{ _("Ítem") }}</th>
 							<th>{{ _("Descripción") }}</th>
-							<th class="text-right">{{ _("Ordenado") }}</th>
+							<th class="text-right">{{ _("Recibido") }}</th>
 							<th class="text-right">{{ _("Facturado") }}</th>
+							<th class="text-right">{{ _("Devuelto") }}</th>
 							<th class="text-right">{{ _("Reservado") }}</th>
 							<th class="text-right">{{ _("Disponible") }}</th>
 							<th>{{ _("Cantidad a facturar") }}</th>
@@ -124,5 +124,5 @@
 {% endblock %}
 
 {% block script %}
-<script src="/assets/portales_web/js/supplier_portal.js"></script>
+<script src="/assets/portales_web/js/supplier_receipt_invoice_portal.js"></script>
 {% endblock %}
