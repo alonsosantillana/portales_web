@@ -1,0 +1,268 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:SIS-{YYYY}-{#####}",
+ "creation": "2026-09-10 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "supplier",
+  "purchase_order",
+  "company",
+  "column_break_identity",
+  "bill_no",
+  "bill_date",
+  "submitted_by",
+  "section_amounts",
+  "currency",
+  "declared_total",
+  "column_break_amounts",
+  "expected_total",
+  "variance",
+  "section_documents",
+  "invoice_pdf",
+  "invoice_xml",
+  "column_break_status",
+  "status",
+  "purchase_invoice",
+  "supplier_remarks",
+  "internal_remarks",
+  "section_items",
+  "items",
+  "section_security",
+  "normalized_bill_no",
+  "supplier_invoice_key"
+ ],
+ "fields": [
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Supplier",
+   "options": "Supplier",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "purchase_order",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Purchase Order",
+   "options": "Purchase Order",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_identity",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "bill_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Supplier Invoice Number",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "bill_date",
+   "fieldtype": "Date",
+   "label": "Supplier Invoice Date",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "submitted_by",
+   "fieldtype": "Link",
+   "label": "Submitted By",
+   "options": "User",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_amounts",
+   "fieldtype": "Section Break",
+   "label": "Amounts"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "declared_total",
+   "fieldtype": "Currency",
+   "label": "Supplier Declared Total",
+   "options": "currency",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_amounts",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "expected_total",
+   "fieldtype": "Currency",
+   "label": "ERPNext Expected Total",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "variance",
+   "fieldtype": "Currency",
+   "label": "Declared Variance",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_documents",
+   "fieldtype": "Section Break",
+   "label": "Documents"
+  },
+  {
+   "fieldname": "invoice_pdf",
+   "fieldtype": "Attach",
+   "label": "Invoice PDF",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "invoice_xml",
+   "fieldtype": "Attach",
+   "label": "Invoice XML",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Registrada",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Registrada\nEn revisión\nObservada\nProcesada\nRechazada",
+   "reqd": 1
+  },
+  {
+   "fieldname": "purchase_invoice",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Purchase Invoice",
+   "options": "Purchase Invoice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "supplier_remarks",
+   "fieldtype": "Small Text",
+   "label": "Supplier Remarks",
+   "read_only": 1
+  },
+  {
+   "fieldname": "internal_remarks",
+   "fieldtype": "Small Text",
+   "label": "Internal Remarks"
+  },
+  {
+   "fieldname": "section_items",
+   "fieldtype": "Section Break",
+   "label": "Items"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "Supplier Invoice Submission Item",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_security",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Security"
+  },
+  {
+   "fieldname": "normalized_bill_no",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Normalized Invoice Number",
+   "permlevel": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "supplier_invoice_key",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Supplier Invoice Key",
+   "permlevel": 1,
+   "reqd": 1,
+   "unique": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-10 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Portales Web",
+ "name": "Supplier Invoice Submission",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Purchase Manager",
+   "write": 1
+  },
+  {
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "Accounts Manager"
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager"
+  }
+ ],
+ "search_fields": "supplier,purchase_order,bill_no,purchase_invoice",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "bill_no",
+ "track_changes": 1
+}

@@ -1,0 +1,127 @@
+{% extends "templates/web.html" %}
+
+{% block title %}{{ _("Registrar factura") }}{% endblock %}
+
+{% block head_include %}
+<link rel="stylesheet" href="/assets/portales_web/css/supplier_portal.css">
+{% endblock %}
+
+{% block page_content %}
+<div class="supplier-invoice-portal" data-supplier="{{ supplier | e }}">
+	<div class="supplier-invoice-header">
+		<div>
+			<p class="text-muted mb-1">{{ _("Portal de proveedores") }}</p>
+			<h1 class="mb-2">{{ _("Registrar factura") }}</h1>
+			<p class="mb-0">{{ _("Proveedor") }}: <strong>{{ supplier_name | e }}</strong></p>
+		</div>
+		<div class="supplier-invoice-links">
+			<a class="btn btn-default" href="/purchase-orders">{{ _("Órdenes de compra") }}</a>
+			<a class="btn btn-default" href="/purchase-invoices">{{ _("Facturas") }}</a>
+		</div>
+	</div>
+
+	<div class="alert alert-info">
+		{{ _("Los importes, precios, moneda y proveedor se validarán nuevamente en ERPNext. La factura quedará en borrador para revisión interna.") }}
+	</div>
+
+	<form id="supplier-invoice-form" novalidate>
+		<div class="supplier-invoice-card">
+			<h3>{{ _("Datos del comprobante") }}</h3>
+			<div class="row">
+				<div class="col-md-6 form-group">
+					<label for="purchase-order">{{ _("Orden de compra") }}</label>
+					<select id="purchase-order" class="form-control" required>
+						<option value="">{{ _("Cargando órdenes...") }}</option>
+					</select>
+				</div>
+				<div class="col-md-3 form-group">
+					<label for="bill-no">{{ _("Número de factura") }}</label>
+					<input id="bill-no" class="form-control" maxlength="140" required autocomplete="off">
+				</div>
+				<div class="col-md-3 form-group">
+					<label for="bill-date">{{ _("Fecha de factura") }}</label>
+					<input id="bill-date" class="form-control" type="date" required>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-4 form-group">
+					<label for="currency">{{ _("Moneda") }}</label>
+					<input id="currency" class="form-control" readonly>
+				</div>
+				<div class="col-md-4 form-group">
+					<label for="declared-total">{{ _("Total declarado") }}</label>
+					<input id="declared-total" class="form-control" type="number" min="0.01" step="0.01" required>
+				</div>
+				<div class="col-md-4 form-group">
+					<label for="supplier-remarks">{{ _("Observación") }}</label>
+					<input id="supplier-remarks" class="form-control" maxlength="500">
+				</div>
+			</div>
+		</div>
+
+		<div class="supplier-invoice-card">
+			<h3>{{ _("Ítems pendientes") }}</h3>
+			<div id="items-empty" class="text-muted">{{ _("Seleccione una Orden de Compra.") }}</div>
+			<div class="table-responsive d-none" id="items-wrapper">
+				<table class="table table-bordered supplier-items-table">
+					<thead>
+						<tr>
+							<th>{{ _("Ítem") }}</th>
+							<th>{{ _("Descripción") }}</th>
+							<th class="text-right">{{ _("Ordenado") }}</th>
+							<th class="text-right">{{ _("Facturado") }}</th>
+							<th class="text-right">{{ _("Reservado") }}</th>
+							<th class="text-right">{{ _("Disponible") }}</th>
+							<th>{{ _("Cantidad a facturar") }}</th>
+						</tr>
+					</thead>
+					<tbody id="items-body"></tbody>
+				</table>
+			</div>
+		</div>
+
+		<div class="supplier-invoice-card">
+			<h3>{{ _("Documentos") }}</h3>
+			<div class="row">
+				<div class="col-md-6 form-group">
+					<label for="invoice-pdf">{{ _("Factura PDF") }}</label>
+					<input id="invoice-pdf" class="form-control" type="file" accept="application/pdf,.pdf" required>
+				</div>
+				<div class="col-md-6 form-group">
+					<label for="invoice-xml">{{ _("Factura XML") }}</label>
+					<input id="invoice-xml" class="form-control" type="file" accept="application/xml,text/xml,.xml" required>
+				</div>
+			</div>
+		</div>
+
+		<div class="text-right supplier-submit-row">
+			<button id="submit-invoice" class="btn btn-primary" type="submit">
+				{{ _("Registrar factura") }}
+			</button>
+		</div>
+	</form>
+
+	<div class="supplier-invoice-card supplier-submissions">
+		<h3>{{ _("Registros recientes") }}</h3>
+		<div id="submissions-empty" class="text-muted">{{ _("Cargando registros...") }}</div>
+		<div class="table-responsive d-none" id="submissions-wrapper">
+			<table class="table table-bordered">
+				<thead>
+					<tr>
+						<th>{{ _("Registro") }}</th>
+						<th>{{ _("Factura") }}</th>
+						<th>{{ _("Orden de compra") }}</th>
+						<th>{{ _("Estado") }}</th>
+						<th>{{ _("Purchase Invoice") }}</th>
+					</tr>
+				</thead>
+				<tbody id="submissions-body"></tbody>
+			</table>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="/assets/portales_web/js/supplier_portal.js"></script>
+{% endblock %}

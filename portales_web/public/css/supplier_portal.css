@@ -1,0 +1,60 @@
+.supplier-invoice-portal {
+	max-width: 1100px;
+	margin: 0 auto;
+	padding-bottom: 3rem;
+}
+
+.supplier-invoice-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+}
+
+.supplier-invoice-links {
+	display: flex;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+.supplier-invoice-card {
+	background: var(--card-bg, #fff);
+	border: 1px solid var(--border-color, #d1d8dd);
+	border-radius: 8px;
+	padding: 1.25rem;
+	margin-bottom: 1rem;
+}
+
+.supplier-invoice-card h3 {
+	font-size: 1rem;
+	font-weight: 600;
+	margin: 0 0 1rem;
+}
+
+.supplier-items-table td,
+.supplier-items-table th {
+	vertical-align: middle;
+}
+
+.supplier-items-table .qty-input {
+	min-width: 130px;
+}
+
+.supplier-submit-row {
+	margin: 1rem 0 2rem;
+}
+
+.supplier-submissions {
+	margin-top: 2rem;
+}
+
+@media (max-width: 767px) {
+	.supplier-invoice-header {
+		flex-direction: column;
+	}
+
+	.supplier-invoice-links {
+		width: 100%;
+	}
+}

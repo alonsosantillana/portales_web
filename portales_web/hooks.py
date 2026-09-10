@@ -8,7 +8,19 @@ app_license = "mit"
 # Apps
 # ------------------
 
-# required_apps = []
+required_apps = ["erpnext"]
+
+portal_menu_items = [
+	{
+		"title": "Registrar Factura",
+		"route": "/registrar-factura",
+		"role": "Supplier",
+	},
+]
+
+website_route_rules = [
+	{"from_route": "/registrar-factura", "to_route": "registrar_factura"},
+]
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
@@ -137,13 +149,17 @@ app_license = "mit"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"Purchase Invoice": {
+		"on_submit": "portales_web.portales_web.doctype.supplier_invoice_submission.supplier_invoice_submission.sync_purchase_invoice_status",
+		"on_cancel": "portales_web.portales_web.doctype.supplier_invoice_submission.supplier_invoice_submission.sync_purchase_invoice_status",
+		"on_trash": "portales_web.portales_web.doctype.supplier_invoice_submission.supplier_invoice_submission.sync_purchase_invoice_status",
+	}
+}
+
+has_website_permission = {
+	"Supplier Invoice Submission": "portales_web.portales_web.doctype.supplier_invoice_submission.supplier_invoice_submission.has_website_permission",
+}
 
 # Scheduled Tasks
 # ---------------
@@ -246,4 +262,3 @@ app_license = "mit"
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
-
