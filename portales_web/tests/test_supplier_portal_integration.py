@@ -283,6 +283,14 @@ class TestSupplierPortalIntegration(FrappeTestCase):
 			purchase_order.submit()
 
 			purchase_receipt = make_purchase_receipt(purchase_order.name)
+			if purchase_receipt.meta.get_field("tipo_comprobante"):
+				receipt_voucher = frappe.db.get_value(
+					"Tipos de Comprobante",
+					{"codigo_tipo_comprobante": "09"},
+					"name",
+				)
+				self.assertTrue(receipt_voucher, "A SUNAT 09 voucher is required for this test")
+				purchase_receipt.tipo_comprobante = receipt_voucher
 			purchase_receipt.insert()
 			purchase_receipt.submit()
 
@@ -319,6 +327,9 @@ class TestSupplierPortalIntegration(FrappeTestCase):
 			self.assertEqual(purchase_invoice.items[0].pr_detail, purchase_receipt.items[0].name)
 			self.assertEqual(purchase_invoice.items[0].purchase_order, purchase_order.name)
 			self.assertEqual(purchase_invoice.items[0].qty, 2)
+			self.assertEqual(purchase_invoice.tipo_comprobante, "Factura")
+			self.assertEqual(purchase_invoice.codigo_comprobante, "01")
+			self.assertEqual(purchase_invoice.codigo_tipo_documento, supplier.codigo_tipo_documento)
 			self.assertTrue(all(url.startswith("/private/files/") for url in file_urls))
 
 			availability = get_purchase_receipt_items(purchase_receipt.name)
