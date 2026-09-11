@@ -188,6 +188,15 @@ class TestSupplierPortalIntegration(FrappeTestCase):
 			purchase_invoice.cancel()
 			submission.reload()
 			self.assertEqual(submission.status, "Rechazada")
+			self.assertEqual(submission.purchase_invoice, purchase_invoice.name)
+
+			purchase_invoice.delete()
+			submission.reload()
+			self.assertEqual(submission.status, "Rechazada")
+			self.assertFalse(submission.purchase_invoice)
+
+			submission.delete()
+			self.assertFalse(frappe.db.exists("Supplier Invoice Submission", submission.name))
 		finally:
 			frappe.set_user("Administrator")
 			for file_url in file_urls:
