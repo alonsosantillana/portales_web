@@ -3,12 +3,16 @@
 
 import base64
 import unittest
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import frappe
 
 from portales_web import hooks
 from portales_web.api import supplier_portal
+from portales_web.portales_web.doctype.supplier_invoice_submission import (
+	supplier_invoice_submission,
+)
 from portales_web.portales_web.doctype.supplier_invoice_submission.supplier_invoice_submission import (
 	make_supplier_invoice_key,
 	normalize_bill_no,
@@ -63,6 +67,77 @@ class TestSupplierPortalSecurity(unittest.TestCase):
 				),
 				"SUP-001",
 			)
+
+
+class TestSupplierInvoiceSubmissionLifecycle(unittest.TestCase):
+	@patch.object(supplier_invoice_submission.frappe.db, "exists", return_value="PINV-0001")
+	@patch.object(
+		supplier_invoice_submission.frappe,
+		"throw",
+		side_effect=frappe.ValidationError,
+	)
+	@patch.object(supplier_invoice_submission, "_", new=lambda value: value)
+	def test_existing_purchase_invoice_blocks_submission_deletion(self, _throw, exists):
+		submission = MagicMock(purchase_invoice="PINV-0001")
+
+		with self.assertRaises(frappe.ValidationError):
+			supplier_invoice_submission.SupplierInvoiceSubmission.on_trash(submission)
+
+		exists.assert_called_once_with("Purchase Invoice", "PINV-0001")
+		self.assertIn("PINV-0001", _throw.call_args.args[0])
+
+	@patch.object(supplier_invoice_submission.frappe.db, "exists", return_value=None)
+	def test_missing_purchase_invoice_does_not_block_submission_deletion(self, exists):
+		submission = MagicMock(purchase_invoice="PINV-DELETED")
+
+		supplier_invoice_submission.SupplierInvoiceSubmission.on_trash(submission)
+
+		exists.assert_called_once_with("Purchase Invoice", "PINV-DELETED")
+
+	@patch.object(supplier_invoice_submission.frappe, "get_doc")
+	@patch.object(supplier_invoice_submission.frappe.db, "get_value", return_value="SIS-0001")
+	def test_purchase_invoice_trash_rejects_and_unlinks_submission(self, get_value, get_doc):
+		submission = MagicMock(status="Procesada", purchase_invoice="PINV-0001")
+		get_doc.return_value = submission
+
+		supplier_invoice_submission.sync_purchase_invoice_status(
+			SimpleNamespace(name="PINV-0001", docstatus=2), method="on_trash"
+		)
+
+		self.assertEqual(submission.status, "Rechazada")
+		self.assertIsNone(submission.purchase_invoice)
+		submission.save.assert_called_once_with(ignore_permissions=True)
+		get_value.assert_called_once_with(
+			"Supplier Invoice Submission", {"purchase_invoice": "PINV-0001"}, "name"
+		)
+
+	@patch.object(supplier_invoice_submission.frappe, "get_doc")
+	@patch.object(supplier_invoice_submission.frappe.db, "get_value", return_value="SIS-0001")
+	def test_purchase_invoice_cancel_rejects_and_preserves_link(self, _get_value, get_doc):
+		submission = MagicMock(status="Procesada", purchase_invoice="PINV-0001")
+		get_doc.return_value = submission
+
+		supplier_invoice_submission.sync_purchase_invoice_status(
+			SimpleNamespace(name="PINV-0001", docstatus=2), method="on_cancel"
+		)
+
+		self.assertEqual(submission.status, "Rechazada")
+		self.assertEqual(submission.purchase_invoice, "PINV-0001")
+		submission.save.assert_called_once_with(ignore_permissions=True)
+
+	@patch.object(supplier_invoice_submission.frappe, "get_doc")
+	@patch.object(supplier_invoice_submission.frappe.db, "get_value", return_value="SIS-0001")
+	def test_purchase_invoice_submit_processes_and_preserves_link(self, _get_value, get_doc):
+		submission = MagicMock(status="En revisión", purchase_invoice="PINV-0001")
+		get_doc.return_value = submission
+
+		supplier_invoice_submission.sync_purchase_invoice_status(
+			SimpleNamespace(name="PINV-0001", docstatus=1), method="on_submit"
+		)
+
+		self.assertEqual(submission.status, "Procesada")
+		self.assertEqual(submission.purchase_invoice, "PINV-0001")
+		submission.save.assert_called_once_with(ignore_permissions=True)
 
 
 class TestSupplierPortalQuantities(unittest.TestCase):

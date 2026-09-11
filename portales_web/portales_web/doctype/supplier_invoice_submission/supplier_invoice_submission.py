@@ -34,8 +34,13 @@ class SupplierInvoiceSubmission(Document):
 		self.supplier_invoice_key = make_supplier_invoice_key(self.supplier, self.normalized_bill_no)
 
 	def on_trash(self):
-		if self.purchase_invoice:
-			frappe.throw(_("No se puede eliminar un registro vinculado a una Factura de Compra."))
+		if self.purchase_invoice and frappe.db.exists("Purchase Invoice", self.purchase_invoice):
+			frappe.throw(
+				_(
+					"Elimine primero la Factura de Compra {0}. "
+					"Si está enviada, debe cancelarla antes."
+				).format(frappe.bold(self.purchase_invoice))
+			)
 
 
 def has_website_permission(doc, ptype, user, verbose=False):
@@ -65,6 +70,9 @@ def sync_purchase_invoice_status(doc, method=None):
 		return
 
 	submission = frappe.get_doc("Supplier Invoice Submission", name)
-	if submission.status != status:
+	should_unlink = bool(method == "on_trash" and submission.purchase_invoice)
+	if submission.status != status or should_unlink:
 		submission.status = status
+		if should_unlink:
+			submission.purchase_invoice = None
 		submission.save(ignore_permissions=True)
