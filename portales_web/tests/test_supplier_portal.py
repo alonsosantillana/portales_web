@@ -252,6 +252,68 @@ class TestSupplierFiscalMetadata(unittest.TestCase):
 				supplier_portal._apply_purchase_invoice_fiscal_metadata(invoice)
 
 
+class TestRejectedReceiptInvoiceRetry(unittest.TestCase):
+	def test_rejected_unlinked_submission_for_same_receipt_is_retryable(self):
+		submission = frappe._dict(
+			status="Rechazada",
+			purchase_invoice=None,
+			source_type="Purchase Receipt",
+			purchase_receipt="PREC-0001",
+		)
+
+		self.assertTrue(
+			supplier_portal._is_retryable_receipt_submission(submission, "PREC-0001")
+		)
+
+	def test_linked_or_different_receipt_submission_is_not_retryable(self):
+		linked = frappe._dict(
+			status="Rechazada",
+			purchase_invoice="PINV-0001",
+			source_type="Purchase Receipt",
+			purchase_receipt="PREC-0001",
+		)
+		other_receipt = frappe._dict(
+			status="Rechazada",
+			purchase_invoice=None,
+			source_type="Purchase Receipt",
+			purchase_receipt="PREC-0002",
+		)
+
+		self.assertFalse(
+			supplier_portal._is_retryable_receipt_submission(linked, "PREC-0001")
+		)
+		self.assertFalse(
+			supplier_portal._is_retryable_receipt_submission(other_receipt, "PREC-0001")
+		)
+
+	@patch.object(supplier_portal, "_lock_supplier_invoice_submission")
+	@patch.object(supplier_portal.frappe, "get_doc")
+	def test_retryable_submission_is_locked_and_reloaded(self, get_doc, lock_submission):
+		existing = frappe._dict(
+			name="SIS-0001",
+			status="Rechazada",
+			purchase_invoice=None,
+			source_type="Purchase Receipt",
+			purchase_receipt="PREC-0001",
+		)
+		current = MagicMock(
+			status="Rechazada",
+			purchase_invoice=None,
+			source_type="Purchase Receipt",
+			purchase_receipt="PREC-0001",
+		)
+		get_doc.return_value = current
+
+		retry, locked_current = supplier_portal._get_locked_retryable_receipt_submission(
+			existing, "PREC-0001"
+		)
+
+		lock_submission.assert_called_once_with("SIS-0001")
+		get_doc.assert_called_once_with("Supplier Invoice Submission", "SIS-0001")
+		self.assertIs(retry, current)
+		self.assertIs(locked_current, current)
+
+
 class TestSupplierPortalQuantities(unittest.TestCase):
 	def setUp(self):
 		self.available = {

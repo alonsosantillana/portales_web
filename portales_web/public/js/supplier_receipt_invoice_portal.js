@@ -223,12 +223,18 @@ frappe.ready(() => {
 				supplier_remarks: document.getElementById("supplier-remarks").value,
 			});
 			const result = response.message || {};
+			const resultMessage = result.purchase_invoice
+				? __("Registro {0}. Purchase Invoice {1} en borrador.", [
+						result.submission,
+						result.purchase_invoice,
+					])
+				: __("Registro {0} en estado {1}, sin Factura de Compra vinculada.", [
+						result.submission,
+						result.status,
+					]);
 			frappe.msgprint({
 				title: result.duplicate ? __("Factura ya registrada") : __("Factura registrada"),
-				message: __("Registro {0}. Purchase Invoice {1} en borrador.", [
-					result.submission,
-					result.purchase_invoice,
-				]),
+				message: resultMessage,
 				indicator: result.duplicate ? "orange" : "green",
 			});
 			if (!result.duplicate) form.reset();

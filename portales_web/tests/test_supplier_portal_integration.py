@@ -14,6 +14,7 @@ from pypdf import PdfWriter
 from portales_web.api.supplier_portal import (
 	_lock_purchase_order,
 	_lock_purchase_receipt,
+	_lock_supplier_invoice_submission,
 	get_purchase_order_items,
 	get_purchase_receipt_items,
 	submit_invoice,
@@ -44,6 +45,23 @@ class TestSupplierPortalIntegration(FrappeTestCase):
 			frappe.db.sql("SET SESSION innodb_lock_wait_timeout = 1")
 			with self.assertRaises(frappe.QueryTimeoutError) as timeout:
 				_lock_purchase_receipt(purchase_receipts[0])
+			self.assertEqual(timeout.exception.__cause__.args[0], 1205)
+
+	def test_submission_lock_serializes_concurrent_retries(self):
+		# Select from the secondary connection so the fixture is guaranteed to be
+		# committed and visible to both transactions. Other tests may leave
+		# uncommitted submissions visible only on the primary connection.
+		with self.secondary_connection():
+			submissions = frappe.get_all("Supplier Invoice Submission", pluck="name", limit=1)
+		if not submissions:
+			self.skipTest("A Supplier Invoice Submission is required to verify row locking")
+
+		with self.primary_connection():
+			_lock_supplier_invoice_submission(submissions[0])
+		with self.secondary_connection():
+			frappe.db.sql("SET SESSION innodb_lock_wait_timeout = 1")
+			with self.assertRaises(frappe.QueryTimeoutError) as timeout:
+				_lock_supplier_invoice_submission(submissions[0])
 			self.assertEqual(timeout.exception.__cause__.args[0], 1205)
 
 	def test_submission_creates_private_draft_and_reserves_quantity(self):
@@ -344,6 +362,39 @@ class TestSupplierPortalIntegration(FrappeTestCase):
 			purchase_invoice.cancel()
 			submission.reload()
 			self.assertEqual(submission.status, "Rechazada")
+
+			purchase_invoice.delete()
+			submission.reload()
+			self.assertFalse(submission.purchase_invoice)
+
+			frappe.set_user(user_email)
+			retry = submit_invoice_from_receipt(
+				purchase_receipt=purchase_receipt.name,
+				bill_no=f"R001-{suffix}",
+				bill_date=nowdate(),
+				declared_total=20,
+				items=[
+					{"purchase_receipt_item": purchase_receipt.items[0].name, "qty": 2}
+				],
+				invoice_pdf={
+					"file_name": f"receipt-invoice-retry-{suffix}.pdf",
+					"content": pdf_content,
+				},
+				invoice_xml={
+					"file_name": f"receipt-invoice-retry-{suffix}.xml",
+					"content": base64.b64encode(b'<?xml version="1.0"?><Invoice />').decode(),
+				},
+			)
+			self.assertFalse(retry["duplicate"])
+			self.assertEqual(retry["submission"], submission.name)
+			retried_purchase_invoice = frappe.get_doc(
+				"Purchase Invoice", retry["purchase_invoice"]
+			)
+			self.assertEqual(retried_purchase_invoice.docstatus, 0)
+			submission.reload()
+			file_urls.extend([submission.invoice_pdf, submission.invoice_xml])
+			self.assertEqual(submission.status, "En revisión")
+			self.assertEqual(submission.purchase_invoice, retry["purchase_invoice"])
 		finally:
 			frappe.set_user("Administrator")
 			for file_url in file_urls:

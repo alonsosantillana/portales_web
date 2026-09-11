@@ -304,8 +304,13 @@ def submit_invoice_from_receipt(
 	xml_name, xml_content = _decode_attachment(invoice_xml, ".xml")
 
 	existing = _get_existing_submission(invoice_key)
+	retry_submission = None
 	if existing:
-		return _existing_submission_response(existing)
+		retry_submission, existing = _get_locked_retryable_receipt_submission(
+			existing, purchase_receipt
+		)
+		if not retry_submission:
+			return _existing_submission_response(existing)
 
 	_validate_purchase_invoice_duplicate(supplier, normalized_bill_no)
 	_lock_purchase_receipt(purchase_receipt)
@@ -315,33 +320,45 @@ def submit_invoice_from_receipt(
 	}
 	validated_items = _validate_requested_receipt_items(requested_items, available_items)
 
-	request_doc = frappe.get_doc(
-		{
-			"doctype": SUBMISSION_DOCTYPE,
-			"supplier": supplier,
-			"source_type": SOURCE_PURCHASE_RECEIPT,
-			"purchase_receipt": pr.name,
-			"company": pr.company,
-			"bill_no": clean_bill_no,
-			"bill_date": clean_bill_date,
-			"submitted_by": user,
-			"currency": pr.currency,
-			"declared_total": clean_declared_total,
-			"status": "Registrada",
-			"supplier_remarks": clean_remarks,
-			"normalized_bill_no": normalized_bill_no,
-			"supplier_invoice_key": invoice_key,
-			"items": validated_items,
-		}
-	)
+	if retry_submission:
+		request_doc = _prepare_rejected_receipt_submission(
+			retry_submission,
+			user=user,
+			purchase_receipt=pr,
+			bill_no=clean_bill_no,
+			bill_date=clean_bill_date,
+			declared_total=clean_declared_total,
+			supplier_remarks=clean_remarks,
+			items=validated_items,
+		)
+	else:
+		request_doc = frappe.get_doc(
+			{
+				"doctype": SUBMISSION_DOCTYPE,
+				"supplier": supplier,
+				"source_type": SOURCE_PURCHASE_RECEIPT,
+				"purchase_receipt": pr.name,
+				"company": pr.company,
+				"bill_no": clean_bill_no,
+				"bill_date": clean_bill_date,
+				"submitted_by": user,
+				"currency": pr.currency,
+				"declared_total": clean_declared_total,
+				"status": "Registrada",
+				"supplier_remarks": clean_remarks,
+				"normalized_bill_no": normalized_bill_no,
+				"supplier_invoice_key": invoice_key,
+				"items": validated_items,
+			}
+		)
 
-	try:
-		request_doc.insert(ignore_permissions=True, ignore_mandatory=True)
-	except frappe.DuplicateEntryError:
-		existing = _get_existing_submission(invoice_key)
-		if existing:
-			return _existing_submission_response(existing)
-		raise
+		try:
+			request_doc.insert(ignore_permissions=True, ignore_mandatory=True)
+		except frappe.DuplicateEntryError:
+			existing = _get_existing_submission(invoice_key)
+			if existing:
+				return _existing_submission_response(existing)
+			raise
 
 	pi = _make_purchase_invoice_from_receipt(
 		pr, normalized_bill_no, clean_bill_date, validated_items, request_doc.name
@@ -983,9 +1000,79 @@ def _get_existing_submission(invoice_key: str):
 	return frappe.db.get_value(
 		SUBMISSION_DOCTYPE,
 		{"supplier_invoice_key": invoice_key},
-		["name", "purchase_invoice", "status", "expected_total", "variance"],
+		[
+			"name",
+			"source_type",
+			"purchase_receipt",
+			"purchase_invoice",
+			"status",
+			"expected_total",
+			"variance",
+		],
 		as_dict=True,
 	)
+
+
+def _is_retryable_receipt_submission(submission, purchase_receipt: str) -> bool:
+	return bool(
+		submission
+		and submission.status == "Rechazada"
+		and not submission.purchase_invoice
+		and submission.source_type == SOURCE_PURCHASE_RECEIPT
+		and submission.purchase_receipt == purchase_receipt
+	)
+
+
+def _get_locked_retryable_receipt_submission(existing, purchase_receipt: str):
+	if not _is_retryable_receipt_submission(existing, purchase_receipt):
+		return None, existing
+
+	_lock_supplier_invoice_submission(existing.name)
+	current = frappe.get_doc(SUBMISSION_DOCTYPE, existing.name)
+	if not _is_retryable_receipt_submission(current, purchase_receipt):
+		return None, current
+	return current, current
+
+
+def _lock_supplier_invoice_submission(name: str):
+	submission = frappe.qb.DocType(SUBMISSION_DOCTYPE)
+	locked = (
+		frappe.qb.from_(submission)
+		.select(submission.name)
+		.where(submission.name == name)
+		.for_update()
+	).run(pluck=True)
+	if not locked:
+		frappe.throw(_("El registro existente cambió. Intente nuevamente."))
+
+
+def _prepare_rejected_receipt_submission(
+	request_doc,
+	*,
+	user: str,
+	purchase_receipt,
+	bill_no: str,
+	bill_date,
+	declared_total,
+	supplier_remarks: str | None,
+	items: list[dict],
+):
+	request_doc.source_type = SOURCE_PURCHASE_RECEIPT
+	request_doc.purchase_order = None
+	request_doc.purchase_receipt = purchase_receipt.name
+	request_doc.company = purchase_receipt.company
+	request_doc.bill_no = bill_no
+	request_doc.bill_date = bill_date
+	request_doc.submitted_by = user
+	request_doc.currency = purchase_receipt.currency
+	request_doc.declared_total = declared_total
+	request_doc.expected_total = None
+	request_doc.variance = None
+	request_doc.status = "Registrada"
+	request_doc.purchase_invoice = None
+	request_doc.supplier_remarks = supplier_remarks
+	request_doc.set("items", items)
+	return request_doc
 
 
 def _existing_submission_response(existing) -> dict:
