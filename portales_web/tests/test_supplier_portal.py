@@ -177,6 +177,81 @@ class TestSupplierInvoiceSubmissionLifecycle(unittest.TestCase):
 		submission.save.assert_called_once_with(ignore_permissions=True)
 
 
+class TestSupplierFiscalMetadata(unittest.TestCase):
+	def _fiscal_context(self, current_values):
+		invoice = MagicMock(supplier="SUP-001")
+		invoice.get.side_effect = current_values.get
+		invoice.set.side_effect = lambda fieldname, value: current_values.__setitem__(
+			fieldname, value
+		)
+		invoice_meta = MagicMock()
+		invoice_meta.get_field.return_value = object()
+		supplier_identity = frappe._dict(
+			nombre_tipo_documento="RUC", codigo_tipo_documento="6"
+		)
+		catalog_rows = [
+			{"name": "Factura", "code": "01"},
+			{"name": "RUC", "code": "6"},
+		]
+		return invoice, invoice_meta, supplier_identity, catalog_rows
+
+	def test_receipt_mapping_overwrites_source_fiscal_metadata(self):
+		current_values = {
+			"tipo_comprobante": "Guía de remisión - Remitente",
+			"codigo_comprobante": "09",
+			"tipo_documento_identidad": "DNI",
+			"codigo_tipo_documento": "1",
+		}
+		invoice, invoice_meta, supplier_identity, catalog_rows = self._fiscal_context(
+			current_values
+		)
+
+		with (
+			patch.object(supplier_portal.frappe, "get_meta", return_value=invoice_meta),
+			patch.object(
+				supplier_portal.frappe.db, "get_value", return_value=supplier_identity
+			),
+			patch.object(
+				supplier_portal, "_get_fiscal_catalog_row", side_effect=catalog_rows
+			),
+		):
+			supplier_portal._apply_purchase_invoice_fiscal_metadata(
+				invoice, overwrite_existing=True
+			)
+
+		self.assertEqual(
+			current_values,
+			{
+				"tipo_comprobante": "Factura",
+				"codigo_comprobante": "01",
+				"tipo_documento_identidad": "RUC",
+				"codigo_tipo_documento": "6",
+			},
+		)
+
+	def test_default_fiscal_validation_still_rejects_mismatch(self):
+		current_values = {"tipo_comprobante": "Guía de remisión - Remitente"}
+		invoice, invoice_meta, supplier_identity, catalog_rows = self._fiscal_context(
+			current_values
+		)
+
+		with (
+			patch.object(supplier_portal.frappe, "get_meta", return_value=invoice_meta),
+			patch.object(
+				supplier_portal.frappe.db, "get_value", return_value=supplier_identity
+			),
+			patch.object(
+				supplier_portal, "_get_fiscal_catalog_row", side_effect=catalog_rows
+			),
+			patch.object(
+				supplier_portal.frappe, "throw", side_effect=frappe.ValidationError
+			),
+			patch.object(supplier_portal, "_", new=lambda value: value),
+		):
+			with self.assertRaises(frappe.ValidationError):
+				supplier_portal._apply_purchase_invoice_fiscal_metadata(invoice)
+
+
 class TestSupplierPortalQuantities(unittest.TestCase):
 	def setUp(self):
 		self.available = {
@@ -400,7 +475,7 @@ class TestSupplierReceiptMapper(unittest.TestCase):
 		self.assertEqual(invoice_item.qty, 2)
 		self.assertEqual(invoice_item.purchase_receipt, "PR-001")
 		native_mapper.assert_called_once_with("PR-001", {"PR-ITEM-1"})
-		fiscal_adapter.assert_called_once_with(invoice)
+		fiscal_adapter.assert_called_once_with(invoice, overwrite_existing=True)
 		invoice.insert.assert_called_once_with(ignore_permissions=True)
 
 	@patch.object(supplier_portal.frappe.db, "get_single_value", return_value=0)

@@ -730,7 +730,7 @@ def _make_purchase_invoice_from_receipt(
 	pi.remarks = _("Registrada desde una recepción en el portal de proveedores: {0}").format(
 		submission
 	)
-	_apply_purchase_invoice_fiscal_metadata(pi)
+	_apply_purchase_invoice_fiscal_metadata(pi, overwrite_existing=True)
 	pi.insert(ignore_permissions=True)
 	return pi
 
@@ -822,8 +822,8 @@ def _map_purchase_receipt_to_invoice(source_name: str, selected_items: set[str])
 	)
 
 
-def _apply_purchase_invoice_fiscal_metadata(pi) -> None:
-	"""Populate Ovenube fiscal fields only when its complete schema is installed."""
+def _apply_purchase_invoice_fiscal_metadata(pi, *, overwrite_existing: bool = False) -> None:
+	"""Populate Ovenube fields, overwriting only values from a trusted source mapping."""
 	invoice_meta = frappe.get_meta("Purchase Invoice")
 	present_fields = {fieldname for fieldname in FISCAL_FIELDS if invoice_meta.get_field(fieldname)}
 	if not present_fields:
@@ -874,7 +874,7 @@ def _apply_purchase_invoice_fiscal_metadata(pi) -> None:
 	}
 	for fieldname, expected in expected_values.items():
 		current = _clean_fiscal_value(pi.get(fieldname))
-		if current and current != expected:
+		if current and current != expected and not overwrite_existing:
 			frappe.throw(_("El valor fiscal de {0} no coincide con el catálogo.").format(fieldname))
 		pi.set(fieldname, expected)
 
