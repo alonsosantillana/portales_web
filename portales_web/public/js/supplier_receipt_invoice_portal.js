@@ -10,12 +10,31 @@ frappe.ready(() => {
 	const submissionsWrapper = document.getElementById("submissions-wrapper");
 	const submissionsEmpty = document.getElementById("submissions-empty");
 	const submitButton = document.getElementById("submit-invoice");
+	let isSubmitting = false;
 
 	const call = (method, args = {}) =>
 		frappe.call({
 			method: `${api}.${method}`,
 			args,
 		});
+
+	const setProcessing = (processing) => {
+		if (processing) {
+			if (isSubmitting) return false;
+			isSubmitting = true;
+			submitButton.disabled = true;
+			form.setAttribute("aria-busy", "true");
+			frappe.dom.freeze(__("Procesando factura. Por favor, espere."));
+			return true;
+		}
+
+		if (!isSubmitting) return false;
+		frappe.dom.unfreeze();
+		form.removeAttribute("aria-busy");
+		submitButton.disabled = false;
+		isSubmitting = false;
+		return true;
+	};
 
 	const addTextCell = (row, value, className = "") => {
 		const cell = row.insertCell();
@@ -194,6 +213,7 @@ frappe.ready(() => {
 
 	const handleSubmit = async (event) => {
 		event.preventDefault();
+		if (isSubmitting) return;
 		if (!form.reportValidity()) return;
 
 		const items = collectItems();
@@ -209,7 +229,7 @@ frappe.ready(() => {
 			return;
 		}
 
-		submitButton.disabled = true;
+		setProcessing(true);
 		try {
 			const [invoicePdf, invoiceXml] = await Promise.all([readFile(pdf), readFile(xml)]);
 			const response = await call("submit_invoice_from_receipt", {
@@ -223,6 +243,7 @@ frappe.ready(() => {
 				supplier_remarks: document.getElementById("supplier-remarks").value,
 			});
 			const result = response.message || {};
+			setProcessing(false);
 			frappe.msgprint({
 				title: result.duplicate ? __("Factura ya registrada") : __("Factura registrada"),
 				message: __("Registro {0}. Purchase Invoice {1} en borrador.", [
@@ -235,7 +256,7 @@ frappe.ready(() => {
 			clearItems();
 			await Promise.all([loadPurchaseReceipts(), loadSubmissions()]);
 		} finally {
-			submitButton.disabled = false;
+			setProcessing(false);
 		}
 	};
 
