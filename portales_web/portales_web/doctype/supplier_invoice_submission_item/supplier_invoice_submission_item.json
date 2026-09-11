@@ -7,12 +7,14 @@
  "engine": "InnoDB",
  "field_order": [
   "purchase_order_item",
+  "purchase_receipt_item",
   "item_code",
   "description",
   "uom",
   "currency",
   "ordered_qty",
   "submitted_billed_qty",
+  "returned_qty",
   "reserved_qty",
   "available_qty",
   "qty",
@@ -25,8 +27,14 @@
    "fieldtype": "Data",
    "hidden": 1,
    "label": "Purchase Order Item",
-   "read_only": 1,
-   "reqd": 1
+   "read_only": 1
+  },
+  {
+   "fieldname": "purchase_receipt_item",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Purchase Receipt Item",
+   "read_only": 1
   },
   {
    "fieldname": "item_code",
@@ -63,13 +71,19 @@
   {
    "fieldname": "ordered_qty",
    "fieldtype": "Float",
-   "label": "Ordered Quantity",
+   "label": "Source Quantity",
    "read_only": 1
   },
   {
    "fieldname": "submitted_billed_qty",
    "fieldtype": "Float",
    "label": "Submitted Billed Quantity",
+   "read_only": 1
+  },
+  {
+   "fieldname": "returned_qty",
+   "fieldtype": "Float",
+   "label": "Returned Quantity",
    "read_only": 1
   },
   {

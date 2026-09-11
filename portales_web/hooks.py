@@ -16,10 +16,19 @@ portal_menu_items = [
 		"route": "/registrar-factura",
 		"role": "Supplier",
 	},
+	{
+		"title": "Facturar recepción",
+		"route": "/registrar-factura-recepcion",
+		"role": "Supplier",
+	},
 ]
 
 website_route_rules = [
 	{"from_route": "/registrar-factura", "to_route": "registrar_factura"},
+	{
+		"from_route": "/registrar-factura-recepcion",
+		"to_route": "registrar_factura_recepcion",
+	},
 ]
 
 # Each item in the list will be shown as an app in the apps page

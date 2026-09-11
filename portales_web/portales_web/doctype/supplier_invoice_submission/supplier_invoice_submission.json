@@ -8,7 +8,9 @@
  "engine": "InnoDB",
  "field_order": [
   "supplier",
+  "source_type",
   "purchase_order",
+  "purchase_receipt",
   "company",
   "column_break_identity",
   "bill_no",
@@ -45,13 +47,30 @@
    "reqd": 1
   },
   {
+   "default": "Purchase Order",
+   "fieldname": "source_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Source Type",
+   "options": "Purchase Order\nPurchase Receipt",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
    "fieldname": "purchase_order",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Purchase Order",
    "options": "Purchase Order",
-   "read_only": 1,
-   "reqd": 1
+   "read_only": 1
+  },
+  {
+   "fieldname": "purchase_receipt",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Purchase Receipt",
+   "options": "Purchase Receipt",
+   "read_only": 1
   },
   {
    "fieldname": "company",
@@ -259,7 +278,7 @@
    "role": "System Manager"
   }
  ],
- "search_fields": "supplier,purchase_order,bill_no,purchase_invoice",
+ "search_fields": "supplier,purchase_order,purchase_receipt,bill_no,purchase_invoice",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
