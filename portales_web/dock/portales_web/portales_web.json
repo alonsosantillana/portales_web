@@ -1,0 +1,18 @@
+{
+ "doctype": "Dock",
+ "name": "portales_web",
+ "app": "portales_web",
+ "standard": 1,
+ "user": "",
+ "mount_on": "",
+ "items": [
+  {
+   "link_type": "URL",
+   "title": "Portales Web",
+   "icon": "portal-user-soft",
+   "added": 0,
+   "hidden": 0,
+   "url": "/desk/supplier-invoice-submission"
+  }
+ ]
+}

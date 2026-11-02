@@ -271,3 +271,13 @@ has_website_permission = {
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
+
+# Frappe v16 Apps: use the existing destination and its native permissions.
+add_to_apps_screen = [
+	{
+		"name": "portales_web",
+		"title": "Portales Web",
+		"route": "/desk/supplier-invoice-submission",
+		"has_permission": "portales_web.desktop_navigation.has_app_permission",
+	}
+]

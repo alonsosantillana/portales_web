@@ -31,3 +31,16 @@ Pre-commit is configured to use the following tools for checking and formatting 
 ### License
 
 mit
+
+## Navegación en Frappe v16
+
+La pantalla **Apps** muestra **Portales Web** para usuarios internos autorizados y
+abre el DocType existente **Supplier Invoice Submission** (`/desk/supplier-invoice-submission`). El acceso
+respeta los permisos actuales y las restricciones de módulo; no asigna roles.
+El Dock estándar se importa de forma nativa al instalar/migrar esta app en v16.
+No requiere crear Desktop Icons ni Workspace Sidebar, ni reconstruir assets.
+Los iconos de Apps usan las iniciales nativas cuando no hay logo propio.
+
+Alcance, activación puntual en desarrollo y reversión:
+[OpenSpec show-apps-on-v16-desktop](openspec/changes/show-apps-on-v16-desktop/design.md).
+Esta navegación exige el contrato Apps/Dock de v16; no modifica procesos de negocio.
