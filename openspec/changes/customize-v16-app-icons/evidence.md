@@ -13,3 +13,5 @@ App `portales_web`: icon `/assets/portales_web/images/app-icon-v1.svg`.
 - No new site backups were made. Rollback uses only the recorded hook preimage/new image, preserving existing assets/navigation.
 
 Commit/push identifiers are added after source delivery. Do not promote to production or merge maintenance branches implicitly.
+
+Source commit `fa0eb74bda398ffe3fd7b9ca3a3a3aca3fdc7fff` was pushed to `origin` / `feature/v16-app-icons-20261102` and the remote SHA was verified. This documentation follow-up records completed source delivery.
