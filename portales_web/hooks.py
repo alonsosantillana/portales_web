@@ -277,6 +277,7 @@ add_to_apps_screen = [
 	{
 		"name": "portales_web",
 		"title": "Portales Web",
+		"logo": "/assets/portales_web/images/app-icon-v1.svg",
 		"route": "/desk/supplier-invoice-submission",
 		"has_permission": "portales_web.desktop_navigation.has_app_permission",
 	}
