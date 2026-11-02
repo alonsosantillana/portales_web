@@ -13,3 +13,5 @@ App: `portales_web`. Existing target: `Supplier Invoice Submission` at `/desk/su
 - Formatting corrections retain identical Python AST; runtime preimages and deployment manifest are retained outside the repos. Private site identifiers, business snapshots and credentials are excluded from publication.
 
 Final commit/push is recorded separately after delivery. No maintenance-branch merge has occurred. Rollback is limited to these runtime preimages and the new standard Dock owned by this app, preserving user/site layers.
+
+Source delivery: commit `6f48422140a24e8f8012d634fa48eb84b8dea7ef` was pushed to `origin` / `feature/v16-app-navigation-20261102` and its remote ref was verified. The final documentation commit records this evidence; maintenance branches and production remain unchanged.
